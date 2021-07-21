@@ -1,0 +1,849 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
+      <stringProp name="TestPlan.comments"></stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="mongoHost" elementType="Argument">
+            <stringProp name="Argument.name">mongoHost</stringProp>
+            <stringProp name="Argument.value">localhost</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="mongoPort" elementType="Argument">
+            <stringProp name="Argument.name">mongoPort</stringProp>
+            <stringProp name="Argument.value">27017</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="databaseName" elementType="Argument">
+            <stringProp name="Argument.name">databaseName</stringProp>
+            <stringProp name="Argument.value">bdnr-hoberman</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="collectionName" elementType="Argument">
+            <stringProp name="Argument.name">collectionName</stringProp>
+            <stringProp name="Argument.value">Pelicula</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">50</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="MongoConnection" enabled="false">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="script">import com.mongodb.*
+
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+
+import org.bson.Document;
+
+import java.util.Arrays;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(vars.get(&quot;collectionName&quot;));
+	
+	vars.putObject(&quot;collection&quot;, collection);
+	
+	return &quot;Connected to &quot; + vars.get(&quot;collectionName&quot;);
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}</stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="MongoOperation" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoCollection;
+import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.client.model.Projections;
+import com.mongodb.client.model.Filters;
+import org.bson.*;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+
+try {
+	MongoCollection&lt;Document&gt; collection = vars.getObject(&quot;collection&quot;);
+	
+	
+	Document result = collection.aggregate(Arrays.asList(
+												Aggregates.sample(20),
+												Aggregates.project(new Document(&quot;titulo&quot;,1).
+												append(&quot;descripcion&quot;,1).
+												append(&quot;generos&quot;,1).
+												append(&quot;duracion&quot;,1),
+												append(&quot;fechaEstreno&quot;,1),
+												append(&quot;idiomas&quot;,1),
+												append(&quot;+18&quot;,1),
+												))).first();
+												
+	
+	return &quot;Done&quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="StatGraphVisualizer" testclass="ResultCollector" testname="Aggregate Graph" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Consulta 1" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import org.bson.conversions.Bson;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Pelicula&quot;);
+	
+
+	AggregateIterable output = collection.aggregate(Arrays.asList(
+							sample(20),
+							project(new Document(&quot;titulo&quot;,1).
+							append(&quot;descripcion&quot;,1).
+							append(&quot;generos&quot;,1).
+							append(&quot;duracion&quot;,1).
+							append(&quot;fecha&quot;,1).
+							append(&quot;idiomas&quot;,1).
+							append(&quot;+18&quot;,1)
+							)))
+	
+
+												
+	return &quot;Document with id=ppppp found &quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}
+
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Consulta 2" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import com.mongodb.*
+import org.bson.conversions.Bson;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Pelicula&quot;);
+	Bson lookup = new Document(&apos;$lookup&apos;, 
+					new Document(&apos;from&apos;, &apos;Valoraciones&apos;  )
+					.append(&apos;localField&apos;, &apos;_id&apos;)
+					.append(&apos;foreignField&apos;, &apos;idPelicula&apos;)
+					.append(&apos;as&apos;, &apos;valoraciones&apos;));
+	Bson lookup2 = new Document(&apos;$lookup&apos;, 
+					new Document(&apos;from&apos;, &apos;Detalles_Peliculas&apos;  )
+					.append(&apos;localField&apos;, &apos;idPelicula&apos;)
+					.append(&apos;foreignField&apos;, &apos;idPelicula&apos;)
+					.append(&apos;as&apos;, &apos;detalle_pelicula&apos;));
+	AggregateIterable output = collection.aggregate(Arrays.asList(match(new Document(&quot;_id&quot;,new ObjectId(&quot;60f5ee49ccab48413e5ae3f3&quot;))),lookup,lookup2,
+		project(new Document(&quot;titulo&quot;,1).
+						append(&quot;descripcion&quot;,1).
+						append(&quot;generos&quot;,1).
+						append(&quot;duracion&quot;,1).
+						append(&quot;fecha&quot;,1).
+						append(&quot;idiomas&quot;,1).
+						append(&quot;+18&quot;,1).
+						append(&apos;generos&apos;,1).
+						append(&quot;valoraciones.valoracion&quot;, 1).
+						append(&quot;detalle_pelicula.elenco&quot;,1))))
+	
+	return &quot;Document with id=ppppp found &quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}
+
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Consulta 3" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import com.mongodb.*
+import org.bson.conversions.Bson;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Valoraciones&quot;);
+	Bson lookup = new Document(&apos;$lookup&apos;, 
+					new Document(&apos;from&apos;, &apos;Pelicula&apos;  )
+					.append(&apos;localField&apos;, &apos;idPelicula&apos;)
+					.append(&apos;foreignField&apos;, &apos;_id&apos;)
+					.append(&apos;as&apos;, &apos;pelicula&apos;));
+	AggregateIterable output = collection.aggregate(Arrays.asList(match(Filters.gte(&quot;valoracion&quot;, &quot;3.0&quot;)),
+		lookup, match(new Document(&apos;pelicula.generos.nombre&apos;,&apos;Comedy&apos;))))
+	
+	
+	
+	
+	return &quot;Document with id=ppppp found &quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}
+
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Consulta 4" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import com.mongodb.*
+import org.bson.conversions.Bson;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Detalles_Peliculas&quot;);
+
+	//Document result = collection.find(eq(&quot;_id&quot;, new ObjectId(&quot;60f4559cf48b5879eb8c16f3&quot;))).first();	
+	AggregateIterable output = collection.aggregate(Arrays.asList(match(new Document(&quot;idPelicula&quot;,new ObjectId(&quot;60f5ee49ccab48413e5ae3f3&quot;))),project(new Document(&quot;elenco&quot;,1))))
+	
+	return &quot;Document with id=ppppp found &quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}
+
+
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Consulta 5" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import com.mongodb.*
+import org.bson.conversions.Bson;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Valoraciones&quot;);
+	Bson group = new Document(&apos;$group&apos;, 
+					new Document(&apos;_id&apos;, &apos;$idUsuario&apos;  ));
+	AggregateIterable output = collection.aggregate(Arrays.asList(match(new Document(&quot;idPelicula&quot;,new ObjectId(&quot;60f5ee49ccab48413e5ae3f3&quot;))),group))
+	
+	
+	
+	
+	return &quot;Document with id=ppppp found &quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Insert Valoracion" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import org.bson.conversions.Bson;
+import java.util.Date;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Valoraciones&quot;);
+
+	Date hoy = new Date()
+	
+	Document document = new Document(&quot;idPelicula&quot;,new ObjectId(&quot;60f42f94ddada148b96d2d30&quot;))
+		.append(&quot;idUsuario&quot;, &quot;2&quot;)
+		.append(&quot;valoracion&quot;, &quot;4.0&quot;)
+		.append(&quot;fecha&quot;, hoy.getTime().toString());
+
+	collection.insertOne(document);
+										
+	return &quot;Document with id=ppppp found &quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Delete Valoracion" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import static com.mongodb.client.model.Filters.*;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import org.bson.conversions.Bson;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Valoraciones&quot;);
+
+	collection.deleteOne(eq(&quot;_id&quot;, new ObjectId(&quot;60f5b704ffa0f359d4ef8092&quot;)));
+			
+	return &quot;Document with id=ppppp found &quot;;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Insert Pelicula - Hoberman" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import org.bson.conversions.Bson;
+import java.util.Date;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Peliculas&quot;);
+
+	Date hoy = new Date()
+	
+	Document document = new Document(&quot;id&quot;,&quot;999&quot;)
+		.append(&quot;titulo&quot;, &quot;Prueba&quot;)
+		.append(&quot;descripcion&quot;, &quot;esto es una prueba&quot;)
+		.append(&quot;poster&quot;, &quot;prueba.jpg&quot;)
+		.append(&quot;+18&quot;, &quot;False&quot;)
+		.append(&quot;fecha&quot;, &quot;2021-7-19&quot;)
+		.append(&quot;promedio_votos&quot;, &quot;7.3&quot;)
+		.append(&quot;cant_votos&quot;, &quot;3213&quot;)
+		.append(&quot;duracion&quot;, &quot;81.2&quot;)
+		.append(&quot;lenguaje_original&quot;, &quot;es&quot;)
+		.append(&quot;presupuesto&quot;, &quot;400000000&quot;)
+		.append(&quot;lema&quot;, &quot;no tiene&quot;)
+		.append(&quot;ganancia&quot;, &quot;-300&quot;)
+		.append(&quot;video&quot;, &quot;False&quot;)
+		.append(&quot;idiomas&quot;, Arrays.asList(new Document(&quot;nombre&quot;,&quot;ingles&quot;),new Document(&quot;nombre&quot;,&quot;espaniol&quot;)))
+		.append(&quot;generos&quot;,Arrays.asList(new Document(&quot;nombre&quot;,&quot;Animacion&quot;),new Document(&quot;nombre&quot;,&quot;Comedia&quot;)));
+
+	collection.insertOne(document);
+	ObjectId id = document.getObjectId(&quot;_id&quot;);
+
+	MongoCollection&lt;Document&gt; collection2 = database.getCollection(&quot;Detalles_Peliculas&quot;);
+
+	Document document2 = new Document(&quot;idPelicula&quot;, id)
+		.append(&quot;compania_prod&quot;, Arrays.asList(new Document(&quot;nombre&quot;, &quot;Warner&quot;)))
+		.append(&quot;pais&quot;, Arrays.asList(new Document(&quot;nombre&quot;, &quot;Uruguay&quot;)))
+		.append(&quot;elenco&quot;, new Document(&quot;actores&quot;,Arrays.asList(new Document(&quot;nombre&quot;, &quot;prubea&quot;)
+														.append(&quot;personaje&quot;,&quot;personajePrueba&quot;)))
+						.append(&quot;detrasDeCamara&quot;,Arrays.asList(new Document(&quot;nombre&quot;, &quot;prueba&quot;)
+															.append(&quot;rol&quot;,&quot;director&quot;)
+															.append(&quot;departamento&quot;,&quot;nose&quot;))));
+	collection2.insertOne(document2);
+	
+	return &quot;Done&quot; + id;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Delete Pelicula" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import static com.mongodb.client.model.Filters.*;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import org.bson.conversions.Bson;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Pelicula&quot;);
+
+	Document output = collection.aggregate(Arrays.asList(match(new Document(&quot;video&quot;,&quot;False&quot;)))).first();
+
+	ObjectId id = output.get(&quot;_id&quot;);
+	
+	collection.deleteOne(eq(&quot;_id&quot;,id));
+			
+	return output;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Insert Pelicula - Mongo" enabled="false">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.AggregateIterable;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.Block;
+import com.mongodb.client.model.Projections.*;
+import org.bson.conversions.Bson;
+import java.util.Date;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+try {
+	MongoClientSettings settings = MongoClientSettings.builder()
+		.applyToClusterSettings {builder -&gt; 
+			builder.hosts(Arrays.asList(new ServerAddress(vars.get(&quot;mongoHost&quot;),vars.get(&quot;mongoPort&quot;).toInteger())))}
+		.build();
+	
+	MongoClient mongoClient = MongoClients.create(settings);
+	
+	MongoDatabase database = mongoClient.getDatabase(vars.get(&quot;databaseName&quot;));
+	MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;Peliculas&quot;);
+
+	Date hoy = new Date()
+	
+	Document document = new Document(&quot;id&quot;,&quot;999&quot;)
+		.append(&quot;titulo&quot;, &quot;Prueba&quot;)
+		.append(&quot;descripcion&quot;, &quot;esto es una prueba&quot;)
+		.append(&quot;+18&quot;, &quot;False&quot;)
+		.append(&quot;fecha&quot;, &quot;2021-7-19&quot;)
+		.append(&quot;duracion&quot;, &quot;81.2&quot;)
+		.append(&quot;idiomas&quot;, Arrays.asList(new Document(&quot;nombre&quot;,&quot;ingles&quot;),new Document(&quot;nombre&quot;,&quot;espaniol&quot;)))
+		.append(&quot;generos&quot;,Arrays.asList(new Document(&quot;nombre&quot;,&quot;Animacion&quot;),new Document(&quot;nombre&quot;,&quot;Comedia&quot;)));
+
+	collection.insertOne(document);
+	ObjectId id = document.getObjectId(&quot;_id&quot;);
+
+	MongoCollection&lt;Document&gt; collection2 = database.getCollection(&quot;Detalles_Pelicula&quot;);
+
+	Document document2 = new Document(&quot;idPelicula&quot;, id)
+		.append(&quot;poster&quot;, &quot;Prueba.jpg&quot;)
+		.append(&quot;presupuesto&quot;, &quot;33333222&quot;)
+		.append(&quot;ganancia&quot;, &quot;23132131&quot;)
+		.append(&quot;cant_votos&quot;, &quot;5000&quot;)
+		.append(&quot;promedio_votos&quot;, &quot;8.1&quot;)
+		.append(&quot;pagina&quot;, &quot;www.prueba.com&quot;)
+		.append(&quot;lenguaje_original&quot;, &quot;es&quot;)
+		.append(&quot;lema&quot;, &quot;hola&quot;)
+		.append(&quot;video&quot;, &quot;False&quot;)
+		.append(&quot;detras_escena&quot;,Arrays.asList(new Document(&quot;nombre&quot;, &quot;prueba&quot;)
+										.append(&quot;rol&quot;,&quot;director&quot;)
+										.append(&quot;departamento&quot;,&quot;nose&quot;)))
+		.append(&quot;compania_prod&quot;, Arrays.asList(new Document(&quot;nombre&quot;, &quot;Warner&quot;)))
+		.append(&quot;pais&quot;, Arrays.asList(new Document(&quot;nombre&quot;, &quot;Uruguay&quot;)))
+		.append(&quot;actores&quot;,Arrays.asList(new Document(&quot;nombre&quot;, &quot;prubea&quot;)
+									.append(&quot;personaje&quot;,&quot;personajePrueba&quot;)));
+	collection2.insertOne(document2);
+	
+	return &quot;Done&quot; + id;
+}
+catch (Exception e) {
+	SampleResult.setSuccessful(false);
+	SampleResult.setResponseCode(&quot;500&quot;);
+	SampleResult.setResponseMessage(&quot;Exception: &quot; + e);
+}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
